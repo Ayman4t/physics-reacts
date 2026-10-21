@@ -23,7 +23,7 @@ input{width:84px;text-align:center;letter-spacing:.35em;flex:1;min-width:0;outli
 input:focus{border-color:var(--accent)}
 #sim{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(112px + env(safe-area-inset-bottom));padding:10px 20px;border-radius:99px;font-weight:700;color:#fff;border-color:rgba(124,92,255,.5);box-shadow:0 0 24px rgba(124,92,255,.35)}
 #sim:active{transform:translateX(-50%) scale(.96)}
-#dock{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:8px;max-width:520px;margin:0 auto}
+#dock{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(8,1fr);gap:6px;padding:8px;max-width:520px;margin:0 auto}
 #dock button{display:grid;gap:5px;justify-items:center;padding:9px 0 7px;font-size:10px;color:var(--dim);border-color:transparent;border-radius:16px;background:transparent}
 #dock button b{font-size:22px;height:26px;display:grid;place-items:center;font-weight:400}
 #dock .sw{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 32% 28%,#fff 0,var(--c) 45%,color-mix(in srgb,var(--c) 55%,#000) 100%);box-shadow:0 0 14px var(--c)}
@@ -50,7 +50,7 @@ input:focus{border-color:var(--accent)}
   <div class="row"><button id="host">Host room</button><input id="code" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="4-digit room code"><button id="join">Join</button></div>
 </div>
 <div id="ban"><div class="ar"></div><div class="en"></div><i>NEW DISCOVERY</i></div>
-<div id="hint">Pick an element or color, then flick its capsule ↑</div>
+<div id="hint">Pick an item, then flick its capsule ↑</div>
 <div id="toast" class="g"></div>
 <div id="log" class="g"></div>
 <button id="sim" class="g">⚡ Simulate Incoming Capsule</button>
@@ -66,30 +66,51 @@ function resize(){D=Math.min(devicePixelRatio||1,2);W=innerWidth;H=innerHeight;c
 addEventListener('resize',resize);resize();
 
 /* ---------- DATA ---------- */
-/* 2 elements (Fire, Water) + 5 colors */
+/* 8 classic items everyone knows */
 const E={
  fire:{e:'🔥',c:'#ff4d2e',n:'Fire'},
  water:{e:'💧',c:'#2ea8ff',n:'Water'},
- pink:{e:'',c:'#ff3dcb',n:'Pink'},
- cyan:{e:'',c:'#19f0ff',n:'Cyan'},
- lime:{e:'',c:'#a6ff2e',n:'Lime'},
- gold:{e:'',c:'#ffcc1a',n:'Gold'},
- violet:{e:'',c:'#8a5cff',n:'Violet'}};
-const EF={
- fog:['بخار كثيف','Cyber Fog',.3],emp:['مجال مغناطيسي','Magnetic Field',.2],hole:['ثقب أسود','Black Hole',.22],
- acid:['مطر نيون','Neon Rain',.25],lava:['حمم منصهرة','Molten Lava',.3],plasma:['عاصفة بلازما','Plasma Storm',.3],
- zerog:['حطام عائم','Zero-G Debris',.35],glitch:['عدوى جليتش','Glitch Virus',.4],cryo:['تجميد زمني','Cryo Freeze',.3],
- nova:['انفجار نجمي','Supernova',.2],aurora:['شفق قطبي','Aurora',.18],galaxy:['مجرة دوّارة','Spiral Galaxy',.15],
- bloom:['إزهار نيون','Neon Blossom',.25],rainbow:['فقاعات قوس قزح','Rainbow Bubbles',.3]};
+ earth:{e:'🌍',c:'#b0763a',n:'Earth'},
+ air:{e:'💨',c:'#cfe8ff',n:'Air'},
+ ice:{e:'❄️',c:'#7df9ff',n:'Ice'},
+ lightning:{e:'⚡',c:'#ffe14d',n:'Bolt'},
+ plant:{e:'🌱',c:'#3ddc6a',n:'Plant'},
+ sun:{e:'☀️',c:'#ffb020',n:'Sun'}};
+const TR={fog:.3,emp:.2,hole:.22,acid:.25,lava:.3,plasma:.3,zerog:.35,glitch:.4,cryo:.3,nova:.2,aurora:.18,galaxy:.15,bloom:.25,rainbow:.3};
+/* pair -> [effect, English name, Arabic name, optional palette] */
 const MAP={
- 'cyan+fire':'plasma','cyan+gold':'aurora','cyan+lime':'emp','cyan+pink':'galaxy','cyan+violet':'zerog','cyan+water':'cryo',
- 'fire+gold':'lava','fire+lime':'glitch','fire+pink':'nova','fire+violet':'hole','fire+water':'fog',
- 'gold+lime':'acid','gold+pink':'bloom','gold+violet':'galaxy','gold+water':'rainbow',
- 'lime+pink':'rainbow','lime+violet':'plasma','lime+water':'acid','pink+violet':'bloom','pink+water':'bloom','violet+water':'aurora'};
+ 'air+earth':['zerog','Sandstorm','عاصفة رملية'],
+ 'air+fire':['lava','Firestorm','عاصفة نارية'],
+ 'air+ice':['cryo','Blizzard','عاصفة ثلجية'],
+ 'air+lightning':['plasma','Thunderstorm','عاصفة رعدية'],
+ 'air+plant':['bloom','Pollen Bloom','حبوب اللقاح'],
+ 'air+sun':['fog','Heat Haze','موجة حر'],
+ 'air+water':['fog','Clouds','سحب'],
+ 'earth+fire':['lava','Volcano','بركان'],
+ 'earth+ice':['cryo','Glacier','نهر جليدي'],
+ 'earth+lightning':['glitch','Earthquake','زلزال'],
+ 'earth+plant':['bloom','Forest','غابة'],
+ 'earth+sun':['aurora','Desert Mirage','سراب الصحراء'],
+ 'earth+water':['fog','Swamp','مستنقع'],
+ 'fire+ice':['aurora','Aurora','شفق قطبي'],
+ 'fire+lightning':['plasma','Plasma','بلازما'],
+ 'fire+plant':['nova','Wildfire','حريق غابات'],
+ 'fire+sun':['nova','Supernova','سوبرنوفا'],
+ 'fire+water':['fog','Steam','بخار',['#d4f1f9','#ffffff','#b8e2ff','#e0d4ff']],
+ 'ice+lightning':['emp','Frost Spark','شرارة الصقيع'],
+ 'ice+plant':['bloom','Frost Flowers','زهور الصقيع'],
+ 'ice+sun':['acid','Meltdown','ذوبان'],
+ 'ice+water':['cryo','Frozen Lake','بحيرة متجمدة'],
+ 'lightning+plant':['emp','Bio-Spark','شرارة الحياة'],
+ 'lightning+sun':['galaxy','Solar Flare','توهج شمسي'],
+ 'lightning+water':['emp','Electric Shock','صعق كهربائي'],
+ 'plant+sun':['bloom','Sunflowers','عباد الشمس'],
+ 'plant+water':['acid','Rainforest','غابة مطيرة'],
+ 'sun+water':['rainbow','Rainbow','قوس قزح']};
 const mix=(a,b)=>{const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));const x=p(a),y=p(b);return'#'+x.map((v,i)=>Math.round((v+y[i])/2).toString(16).padStart(2,'0')).join('')};
 const R={};
-Object.entries(MAP).forEach(([key,fx])=>{const[a,b]=key.split('+'),ca=E[a].c,cb=E[b].c,f=EF[fx];
- R[key]={key,id:fx,ar:f[0],en:f[1],tr:f[2],c:key==='fire+water'?['#d4f1f9','#ffffff','#b8e2ff','#e0d4ff']:[ca,cb,mix(ca,cb),'#ffffff']}});
+Object.entries(MAP).forEach(([key,[fx,en,ar,pal]])=>{const[a,b]=key.split('+'),ca=E[a].c,cb=E[b].c;
+ R[key]={key,id:fx,ar,en,tr:TR[fx],c:pal||[ca,cb,mix(ca,cb),'#ffffff']}});
 const CHAOS={key:'chaos',id:'chaos',ar:'طاقة غير مستقرة',en:'Unstable Energy Overload',c:['#f0f'],tr:.2,fb:1};
 const IDLE={id:'idle',c:['#fff'],tr:.25};
 const keyOf=(a,b)=>[a,b].sort().join('+');
@@ -107,7 +128,7 @@ const sfx={charge:()=>{tone('sawtooth',160,900,.5,.07);tone('sine',320,1800,.5,.
 /* ---------- STATE ---------- */
 let sel=null,cap=null,inc=[],mode=IDLE,modeEnd=0,shake=0,flash=0,topGlow=0,topCol='#fff',rings=[],lastPulse=0,hintOn=true;
 const T={x:0,y:0,d:0};
-let found=new Set();try{found=new Set(JSON.parse(localStorage.getItem('reactor-found-v2')||'[]'))}catch(e){}
+let found=new Set();try{found=new Set(JSON.parse(localStorage.getItem('reactor-found-v3')||'[]'))}catch(e){}
 const P=Array.from({length:200},()=>({}));
 
 /* ---------- UI ---------- */
@@ -147,7 +168,7 @@ $('#sim').onclick=()=>{ac();spawnIncoming(pick(Object.keys(E)),cap?cap.x/W:.2+rn
 function collide(a,b){const k=R[keyOf(a,b)]?keyOf(a,b):'chaos';startReaction(k,false)}
 function startReaction(key,remote){const r=R[key]||CHAOS;mode=r;modeEnd=performance.now()+8000;rstAll(true);rings=[];lastPulse=0;
  shake=r.id==='nova'?30:22;flashFx(r.c[0]);sfx.boom();setTimeout(sfx.chime,350);
- const nw=!found.has(r.key);if(nw){found.add(r.key);try{localStorage.setItem('reactor-found-v2',JSON.stringify([...found]))}catch(e){}renderLog()}
+ const nw=!found.has(r.key);if(nw){found.add(r.key);try{localStorage.setItem('reactor-found-v3',JSON.stringify([...found]))}catch(e){}renderLog()}
  const b=$('#ban');b.querySelector('.ar').textContent=r.ar;b.querySelector('.en').textContent=r.en.toUpperCase();b.style.color=r.c[0];b.querySelector('i').style.display=nw?'inline-block':'none';
  b.classList.add('show');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove('show'),7600);
  if(!remote)send({type:'REACTION',recipeKey:R[key]?key:'chaos'})}
