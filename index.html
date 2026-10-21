@@ -40,21 +40,40 @@ input:focus{border-color:var(--accent)}
 #log{position:fixed;inset:auto 10px 175px 10px;max-width:520px;margin:0 auto;max-height:45dvh;overflow:auto;padding:14px;display:none}
 #log div{padding:7px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}
 #log .no{color:#555b72}
+#log .hd{display:flex;justify-content:space-between;align-items:center;border:0;padding:0 0 6px}
+#log .hd button{padding:5px 10px;font-size:11px}
+#log .pb{height:6px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden;margin-bottom:6px;display:block;padding:0}
+#log .pb i{display:block;height:100%;background:linear-gradient(90deg,#7c5cff,#ff3dcb,#ffcc1a);border-radius:9px;transition:width .5s}
+#log .rcp{display:flex;gap:8px;align-items:center}
+.ic{padding:8px 11px}
+#st{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#ban .rc{font-size:clamp(22px,7vw,34px);margin-top:6px;letter-spacing:.2em}
+#intro{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:rgba(5,5,12,.7);backdrop-filter:blur(6px);padding:20px}
+#intro .card{max-width:380px;width:100%;padding:24px;display:grid;gap:14px;text-align:center}
+#intro h2{margin:0;font-size:24px;letter-spacing:.04em}
+#intro p{margin:0;color:var(--dim);line-height:1.5}
+#intro ol{margin:0;padding:0;list-style:none;display:grid;gap:10px;text-align:left}
+#intro li{display:flex;gap:12px;align-items:center;background:rgba(255,255,255,.05);border-radius:14px;padding:10px 12px}
+#intro li b{font-size:22px}
+#intro #go{background:linear-gradient(135deg,#7c5cff,#d63df0);border-color:transparent;padding:12px;font-size:15px}
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
 <div id="fl"></div>
 <div id="hud" class="g">
-  <div class="row"><span id="dot"></span><span id="st">SOLO // OFFLINE</span><button id="lg">🧬 <span id="cnt">0</span> / <span id="tot">10</span></button></div>
+  <div class="row"><span id="dot"></span><span id="st">SOLO // OFFLINE</span><button id="snd" class="ic" aria-label="Sound">🔊</button><button id="hp" class="ic" aria-label="Help">?</button><button id="lg">🧬 <span id="cnt">0</span> / <span id="tot">10</span></button></div>
   <div class="row"><button id="host">Host room</button><input id="code" inputmode="numeric" maxlength="4" placeholder="0000" aria-label="4-digit room code"><button id="join">Join</button></div>
 </div>
-<div id="ban"><div class="ar"></div><div class="en"></div><i>NEW DISCOVERY</i></div>
-<div id="hint">Pick an item, then flick its capsule ↑</div>
+<div id="ban"><div class="ar"></div><div class="en"></div><div class="rc"></div><i>NEW DISCOVERY</i></div>
+<div id="hint">Tap an item to load its capsule</div>
 <div id="toast" class="g"></div>
 <div id="log" class="g"></div>
-<button id="sim" class="g">⚡ Simulate Incoming Capsule</button>
+<button id="sim" class="g">🎲 Random Capsule</button>
 <div id="dock" class="g"></div>
+<div id="intro"><div class="g card"><h2>⚗️ REACTOR</h2><p>Mix the 8 elements and discover 28 hidden reactions.</p>
+<ol><li><b>👆</b><span>Tap an item to load its capsule</span></li><li><b>🔥💧</b><span>Tap a second item to mix them</span></li><li><b>🧬</b><span>Open the log to track discoveries</span></li><li><b>🔗</b><span>Host or join a room to play with a friend — flick up to send</span></li></ol>
+<button id="go">Start mixing</button></div></div>
 
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <script>
@@ -116,10 +135,10 @@ const IDLE={id:'idle',c:['#fff'],tr:.25};
 const keyOf=(a,b)=>[a,b].sort().join('+');
 
 /* ---------- AUDIO (Web Audio, procedural) ---------- */
-let AC;
+let AC,muted=false;try{muted=localStorage.getItem('reactor-muted')==='1'}catch(e){}
 function ac(){if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}if(AC&&AC.state==='suspended')AC.resume();return AC}
-function tone(type,f0,f1,dur,vol,delay=0){const a=ac();if(!a)return;const t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g).connect(a.destination);o.start(t);o.stop(t+dur)}
-function noise(dur,type,f0,f1,vol){const a=ac();if(!a)return;const n=a.sampleRate*dur,b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain(),t=a.currentTime;s.buffer=b;f.type=type;f.frequency.setValueAtTime(f0,t);f.frequency.exponentialRampToValueAtTime(f1,t+dur);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);s.connect(f).connect(g).connect(a.destination);s.start()}
+function tone(type,f0,f1,dur,vol,delay=0){if(muted)return;const a=ac();if(!a)return;const t=a.currentTime+delay,o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.setValueAtTime(f0,t);o.frequency.exponentialRampToValueAtTime(f1,t+dur);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);o.connect(g).connect(a.destination);o.start(t);o.stop(t+dur)}
+function noise(dur,type,f0,f1,vol){if(muted)return;const a=ac();if(!a)return;const n=a.sampleRate*dur,b=a.createBuffer(1,n,a.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;const s=a.createBufferSource(),f=a.createBiquadFilter(),g=a.createGain(),t=a.currentTime;s.buffer=b;f.type=type;f.frequency.setValueAtTime(f0,t);f.frequency.exponentialRampToValueAtTime(f1,t+dur);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);s.connect(f).connect(g).connect(a.destination);s.start()}
 const sfx={charge:()=>{tone('sawtooth',160,900,.5,.07);tone('sine',320,1800,.5,.05)},
  throw:()=>noise(.45,'bandpass',300,3800,.35),
  boom:()=>{tone('sine',140,28,.9,.8);noise(.7,'lowpass',2200,80,.7)},
@@ -135,13 +154,27 @@ const P=Array.from({length:200},()=>({}));
 const dock=$('#dock');
 Object.entries(E).forEach(([k,v])=>{const b=document.createElement('button');b.style.setProperty('--c',v.c);b.dataset.k=k;
  b.innerHTML=`<b class="${v.e?'em':''}">${v.e||'<span class="sw"></span>'}</b>${v.n}`;b.onclick=()=>choose(k);dock.appendChild(b)});
-function choose(k){sel=k;ac();sfx.charge();cap={x:W/2,y:H/2,vx:0,vy:0,el:k,drag:0};hintOn=false;$('#hint').style.display='none';
+function choose(k){ac();
+ if(cap&&!cap.drag){sfx.charge();spawnIncoming(k,cap.x/W,16);return}
+ sel=k;sfx.charge();cap={x:W/2,y:H/2,vx:0,vy:0,el:k,drag:0};
+ if(hintOn){const h=$('#hint');h.style.display='block';h.textContent='Now tap another item to mix them'}
  dock.querySelectorAll('button').forEach(b=>b.classList.toggle('sel',b.dataset.k===k));if(mode.id==='idle')rstAll()}
 let tt;function toast(m){const t=$('#toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>t.style.opacity=0,2400)}
-function renderLog(){$('#cnt').textContent=[...found].filter(x=>x!=='chaos'&&R[x]).length;$('#tot').textContent=Object.keys(R).length;
- $('#log').innerHTML=Object.values(R).map(r=>found.has(r.key)?`<div><span>${r.en}</span><span dir="rtl">${r.ar}</span></div>`:`<div class="no"><span>???</span><span>؟؟؟</span></div>`).join('')+`<div class="${found.has('chaos')?'':'no'}"><span>${found.has('chaos')?CHAOS.en:'???'}</span><span dir="rtl">${found.has('chaos')?CHAOS.ar:'؟؟؟'}</span></div>`}
+function saveFound(){try{localStorage.setItem('reactor-found-v3',JSON.stringify([...found]))}catch(e){}}
+function renderLog(){const n=[...found].filter(x=>R[x]).length,tot=Object.keys(R).length;$('#cnt').textContent=n;$('#tot').textContent=tot;
+ const rows=Object.values(R).map(r=>{const[a,b]=r.key.split('+');return found.has(r.key)
+  ?`<div><span class="rcp">${E[a].e} + ${E[b].e} <b>${r.en}</b></span><span dir="rtl">${r.ar}</span></div>`
+  :`<div class="no"><span class="rcp">${E[a].e} + ?</span><span>؟؟؟</span></div>`}).join('');
+ $('#log').innerHTML=`<div class="hd"><b>Discoveries ${n}/${tot}</b><button id="rs">Reset</button></div><span class="pb"><i style="width:${n/tot*100}%"></i></span>`+rows+`<div class="${found.has('chaos')?'':'no'}"><span>${found.has('chaos')?'⚠️ '+CHAOS.en:'⚠️ ???'}</span><span dir="rtl">${found.has('chaos')?CHAOS.ar:'؟؟؟'}</span></div>`}
+$('#log').onclick=e=>{if(e.target.id==='rs'&&confirm('Reset all discoveries?')){found=new Set();saveFound();renderLog()}};
 $('#lg').onclick=()=>{const l=$('#log');l.style.display=l.style.display==='block'?'none':'block'};
 renderLog();
+function setSnd(){$('#snd').textContent=muted?'🔇':'🔊'}
+$('#snd').onclick=()=>{muted=!muted;try{localStorage.setItem('reactor-muted',muted?'1':'0')}catch(e){}setSnd();if(!muted){ac();sfx.chime()}};setSnd();
+const intro=$('#intro');let seen=false;try{seen=localStorage.getItem('reactor-seen')==='1'}catch(e){}
+if(seen)intro.style.display='none';
+$('#go').onclick=()=>{intro.style.display='none';ac();try{localStorage.setItem('reactor-seen','1')}catch(e){}};
+$('#hp').onclick=()=>{intro.style.display='grid'};
 
 /* ---------- P2P (PeerJS) ---------- */
 let peer,conn;
@@ -168,7 +201,9 @@ $('#sim').onclick=()=>{ac();spawnIncoming(pick(Object.keys(E)),cap?cap.x/W:.2+rn
 function collide(a,b){const k=R[keyOf(a,b)]?keyOf(a,b):'chaos';startReaction(k,false)}
 function startReaction(key,remote){const r=R[key]||CHAOS;mode=r;modeEnd=performance.now()+8000;rstAll(true);rings=[];lastPulse=0;
  shake=r.id==='nova'?30:22;flashFx(r.c[0]);sfx.boom();setTimeout(sfx.chime,350);
- const nw=!found.has(r.key);if(nw){found.add(r.key);try{localStorage.setItem('reactor-found-v3',JSON.stringify([...found]))}catch(e){}renderLog()}
+ const nw=!found.has(r.key);if(nw){found.add(r.key);saveFound();renderLog();if([...found].filter(x=>R[x]).length===Object.keys(R).length)setTimeout(()=>toast('🎉 You discovered every reaction!'),2500)}
+ hintOn=false;$('#hint').style.display='none';try{navigator.vibrate&&navigator.vibrate([40,30,80])}catch(e){}
+ $('#ban .rc').textContent=R[key]?key.split('+').map(x=>E[x].e).join(' + '):'⚠️';
  const b=$('#ban');b.querySelector('.ar').textContent=r.ar;b.querySelector('.en').textContent=r.en.toUpperCase();b.style.color=r.c[0];b.querySelector('i').style.display=nw?'inline-block':'none';
  b.classList.add('show');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove('show'),7600);
  if(!remote)send({type:'REACTION',recipeKey:R[key]?key:'chaos'})}
@@ -285,7 +320,7 @@ function frame(now){
  // incoming
  for(let i=inc.length-1;i>=0;i--){const o=inc[i];o.y+=o.vy;o.vy*=1.004;drawCap(o,now);
   if(cap&&Math.hypot(cap.x-o.x,cap.y-o.y)<90){const a=cap.el,b=o.el;cap=null;drag=false;inc.splice(i,1);collide(a,b);continue}
-  if(o.y>=H/2+10&&!(cap&&Math.hypot(cap.x-o.x,cap.y-o.y)<90)&&o.y>H/2+60){inc.splice(i,1);toast('Missed — load a capsule at the same spot to collide');sfx.chime()}}
+  if(o.y>=H/2+10&&!(cap&&Math.hypot(cap.x-o.x,cap.y-o.y)<90)&&o.y>H/2+60){inc.splice(i,1);toast('Missed! Load a capsule first to catch it');sfx.chime()}}
  if(topGlow>.02){const g=ctx.createLinearGradient(0,0,0,140);g.addColorStop(0,topCol);g.addColorStop(1,'rgba(0,0,0,0)');ctx.globalAlpha=topGlow;ctx.fillStyle=g;ctx.fillRect(0,0,W,140);ctx.globalAlpha=1;topGlow*=.93}
  ctx.restore();
  if(flash>.01){$('#fl').style.opacity=flash;flash*=.85}else $('#fl').style.opacity=0;
